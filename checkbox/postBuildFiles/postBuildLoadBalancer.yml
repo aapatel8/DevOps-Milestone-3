@@ -1,0 +1,77 @@
+---
+- hosts: LoadBalancer
+
+  gather_facts: no
+
+  tasks:
+        # Install python to use ansible
+      - name: install python 2
+        raw: test -e /usr/bin/python || (sudo apt -y update && sudo apt install -y python-minimal)
+        # Get nodejs package
+      - name: get nodejs package
+        shell: curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
+        # Install nodejs and npm
+      - name: install nodejs and npm
+        apt: pkg=nodejs state=present
+        # Copy stable files
+      - name: Add stable file
+        template:
+          src: stable
+          dest: /root/stable
+        become: yes
+        # Copy canary file
+      - name: Add canary file
+        template:
+          src: canary
+          dest: /root/canary
+        become: yes
+        # Get IP of Stable Server
+      - name: get STABLEIP
+        become: yes
+        shell: cat stable
+        register: STABLE
+        # Get IP of Canary Server
+      - name: get CANARYIP
+        become: yes
+        shell: cat canary
+        register: CANARY
+        # Add infrustructure.js
+      - name: Add infrustructure.js
+        template: src=infrastructure.js dest=/root/infrastructure.js
+        become: yes
+        # Configure Stable IP addressess in infrustructure.js
+      - name: Configure Stable IP
+        lineinfile:
+          dest: /root/infrastructure.js
+          regexp: '^var STABLE ='
+          line: "var STABLE = 'http://{{ STABLE.stdout }}';"
+        # Configure Canary IP addressess in infrustructure.js
+      - name: Configure Canary IP
+        lineinfile:
+          dest: /root/infrastructure.js
+          regexp: '^var CANARY ='
+          line: "var CANARY = 'http://{{ CANARY.stdout }}';"
+        # Configure Canary IP addressess in infrustructure.js
+      - name: Configure Canary IP for coming back to previous one
+        lineinfile:
+          dest: /root/infrastructure.js
+          regexp: '^var LASTCANARY ='
+          line: "var LASTCANARY = 'http://{{ CANARY.stdout }}';"
+        # Add package.json
+      - name: Add package.json
+        template: src=package_loadbalancer.json dest=/root/package.json
+        become: yes
+        # Install packages
+      - name: install infrastructure packages
+        shell: npm install
+        args:
+          chdir: /root
+        # Install forever globally to manage running application
+      - name: install forever
+        npm: name=forever global=yes state=present
+        # Run the infrastructure.js using forever
+      - name: run infrastructure.js
+        shell: forever start infrastructure.js
+        args:
+          chdir: /root
+...

@@ -1,0 +1,44 @@
+---
+
+- name: Executing Ansible Role to Create Droplet
+  hosts:
+    - localhost
+  roles:
+    - Droplet
+
+- name: Refresh Inventory
+  hosts:
+    - localhost
+  tasks:
+    - meta: refresh_inventory
+
+- name: Executing Ansible Role to Setup mongoDB
+  hosts:
+    - mongodb
+  roles:
+    - MongoDB
+  become: yes
+  gather_facts: no
+
+- name: Executing Ansible Role to Setup Jenkins
+  hosts:
+    - main
+  roles:
+    - Jenkins
+  become: yes
+  gather_facts: no
+
+- name: Executing Ansible Role to Install and Run checkbox on Stable server
+  hosts:
+    - main
+  roles:
+    - Checkbox_Stable
+  become: yes
+
+- name: Executing Ansible Role to Install and Run checkbox on Canary server and also create LoadBalancer server
+  hosts:
+    - main
+  roles:
+    - Checkbox_Canary
+  become: yes
+...

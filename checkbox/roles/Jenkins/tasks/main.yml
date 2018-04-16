@@ -1,0 +1,4 @@
+---
+- name: SetUp jenkins
+  include: setUpJenkins_playbook.yml
+...

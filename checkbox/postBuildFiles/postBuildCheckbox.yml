@@ -1,0 +1,82 @@
+---
+- hosts: Stable
+
+  gather_facts: no
+
+  vars:
+    MONGO_USER: "{{ lookup('env','MONGO_USER') }}"
+    MONGO_PASSWORD: "{{ lookup('env','MONGO_PASSWORD') }}"
+    MAIL_USER: "{{ lookup('env','MAIL_USER') }}"
+    MAIL_PASSWORD: "{{ lookup('env','MAIL_PASSWORD') }}"
+    MAIL_SMTP: "{{ lookup('env','MAIL_SMTP') }}"
+
+  tasks:
+      # Install python to use ansible
+    - name: install python 2
+      raw: test -e /usr/bin/python || (sudo apt -y update && sudo apt install -y python-minimal)
+      # Restart the server to set environment variables
+    - name: Restarting Server
+      become: yes
+      shell: sleep 2 && /sbin/shutdown -r now "Ansible system package upgraded"
+      async: 1
+      poll: 0
+      # Wait for server to reboot
+    - name: Wait for reboot
+      local_action: wait_for host={{ inventory_hostname }} port=22 delay=10 state=started
+      become: false
+      # Install git
+    - name: install git
+      apt: pkg=git state=present update_cache=yes
+      become: yes
+      # Get nodejs package
+    - name: get nodejs package
+      shell: curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
+      # Install nodejs and npm
+    - name: install nodejs and npm
+      apt: pkg=nodejs state=present
+      # Install nginx
+    - name: install nginx
+      apt: pkg=nginx state=installed update_cache=true
+      # Update apt-get
+    - name: update apt-get
+      become: yes
+      apt: update_cache=yes
+      # Clone the checkbox.io repository
+    - name: clone checkbox.io repository
+      become: yes
+      git:
+        repo: https://github.com/rmahdav/checkbox.io
+        dest: ./checkbox
+      # Install checkbox.io packages
+    - name: install checkbox packages
+      shell: npm install
+      args:
+        chdir: ./checkbox/server-side/site
+      # Changing permission of the /root/checkbox/public_html to make it executable
+    - name: Changing permission of "/root", adding "+x"
+      file: dest=/root/ mode=+x
+    - name: Changing permission of "/root/checkbox", adding "+x"
+      file: dest=/root/checkbox mode=+x
+    - name: Changing permission of "/root/checkbox/public_html", adding "+x"
+      file: dest=/root/checkbox/public_html mode=+x
+      # Add default file to /etc/nginx/sites-available using template
+    - name: Add default file to nginx
+      template: src=/var/lib/jenkins/workspace/templates/default dest=/etc/nginx/sites-available/default
+      become: yes
+      # Add nginx.config file to /etc/nginx using template
+    - name: Add nginx.config file to nginx
+      template: src=/var/lib/jenkins/workspace/templates/nginx.config dest=/etc/nginx/nginx.conf
+      become: yes
+      # Reload nginx to apply new configuration
+    - name: reload nginx
+      shell: nginx -s reload
+      become: yes
+      # Install forever to manage running application
+    - name: install forever
+      npm: name=forever global=yes state=present
+      # Run the checkbox.io using forever
+    - name: run checkbox
+      shell: forever start server.js
+      args:
+        chdir: ./checkbox/server-side/site/
+...

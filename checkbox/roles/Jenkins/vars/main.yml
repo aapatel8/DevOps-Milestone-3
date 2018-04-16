@@ -1,0 +1,33 @@
+---
+    packages:
+      - nginx
+      - git-core
+      - gcc
+      - default-jdk
+      - git
+      - maven
+      - python-mysqldb
+      - python-pip
+      - python3-lxml
+      - nodejs
+      - software-properties-common
+      - ansible
+
+    pippackages:
+      - python-jenkins
+      - lxml
+
+    jenkins_java_args: 'JAVA_ARGS="-Djava.awt.headless=true -Djenkins.install.runSetupWizard=false -Xmx2048m"'
+    jenkins_port_args: 'HTTP_PORT=8008'
+    jenkins_home: /var/lib/jenkins
+    jenkins_hostname: localhost
+    jenkins_http_port: 8008
+    jenkins_admin_username: admin
+    jenkins_admin_password: admin
+    jenkins_jar_location: /root/jenkins-cli.jar
+    jenkins_default_file: /etc/default/jenkins
+    host_path: /Users/akshitpatel/Desktop/School/CSC519/Milestone1/
+    jenkins_params:
+      url_username: "{{ jenkins_admin_username }}"
+      validate_certs: no
+...

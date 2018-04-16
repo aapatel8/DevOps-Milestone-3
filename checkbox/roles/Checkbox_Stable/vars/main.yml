@@ -1,0 +1,22 @@
+---
+    packages:
+      - git
+      - nginx
+      - python-pip
+      - python3-lxml
+      # - mongodb-org
+      - nodejs
+
+    pippackages:
+      - python-jenkins
+      - lxml
+
+    MONGO_USER: "{{ lookup('env','MONGO_USER') }}"
+    MONGO_PASSWORD: "{{ lookup('env','MONGO_PASSWORD') }}"
+    MAIL_USER: "{{ lookup('env','MAIL_USER') }}"
+    MAIL_PASSWORD: "{{ lookup('env','MAIL_PASSWORD') }}"
+    MAIL_SMTP: "{{ lookup('env','MAIL_SMTP') }}"
+    jenkins_pass: "{{ lookup('env','JENKINS_PASS') }}"
+    DOTOKEN: "{{ lookup('env','DOTOKEN')}}"
+    DOSSHID: "{{ lookup('env','DOSSHID')}}"
+...

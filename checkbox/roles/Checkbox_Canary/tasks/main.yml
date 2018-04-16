@@ -1,0 +1,5 @@
+---
+- name: Install and Run Checkbox
+  include: Checkbox.yml
+  become: yes
+...

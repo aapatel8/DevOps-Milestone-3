@@ -1,0 +1,92 @@
+---
+      # Add environment variables
+    - name: Add environment variables
+      template:
+        src: variables
+        dest: /etc/environment
+      become: yes
+
+      # Restart the server to set environment variables
+    - name: Restarting Server
+      become: yes
+      shell: sleep 2 && /sbin/shutdown -r now "Ansible system package upgraded"
+      async: 1
+      poll: 0
+
+      # Wait for server to reboot
+    - name: Wait for reboot
+      local_action: wait_for host={{ inventory_hostname }} port=22 delay=10 state=started
+      become: false
+
+    - name: Get nodejs package
+      shell: curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
+
+    - name: Install apt packages
+      become: yes
+      apt:
+        pkg: "{{ item }}"
+        state: present
+        update_cache: yes
+      with_items: "{{ packages }}"
+
+    - name: Install pip packages
+      become: yes
+      pip:
+        name: "{{ item }}"
+        state: present
+      with_items: "{{ pippackages }}"
+
+    - name: install forever
+      npm:
+        name: forever
+        global: yes
+        state: present
+
+    - name: Add id_rsa
+      copy:
+        src: ~/.ssh/id_rsa
+        dest: /var/lib/jenkins/.ssh/
+        mode: 0600
+        owner: jenkins
+
+    - name: Add default file to nginx
+      template:
+        src: default
+        dest: /etc/nginx/sites-available/default
+      become: yes
+
+    - name: Add nginx.config file to nginx
+      template:
+        src: nginx.config
+        dest: /etc/nginx/nginx.conf
+      become: yes
+
+    - name: Add default file to nginx
+      copy:
+        src: default
+        dest: /var/lib/jenkins/workspace/templates/default
+        mode: 0644
+        owner: jenkins
+
+    - name: Add nginx.config file to nginx
+      copy:
+        src: nginx.config
+        dest: /var/lib/jenkins/workspace/templates/nginx.config
+        mode: 0644
+        owner: jenkins
+
+    - name: reload nginx
+      shell: nginx -s reload
+      become: yes
+
+    - name: Add github.com to known_hosts
+      shell: su jenkins -c "touch /var/lib/jenkins/.ssh/known_hosts && ssh-keyscan github.com >> /var/lib/jenkins/.ssh/known_hosts"
+      become: yes
+
+    - name: Add Jenkins job (Canary)
+      jenkins_job:
+        config: "{{ lookup('file', 'Canary.xml') }}"
+        name: Canary
+        password: "{{jenkins_pass}}"
+        url: http://localhost:8008/
+        user: admin

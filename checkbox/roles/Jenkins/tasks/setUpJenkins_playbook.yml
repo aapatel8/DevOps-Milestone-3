@@ -1,0 +1,261 @@
+---
+      - name: Add ansible repo
+        apt_repository:
+          repo: ppa:ansible/ansible
+          state: present
+
+      - name: Get nodejs package
+        shell: curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
+
+      - name: Pre-Installing necessary softwares
+        apt: pkg={{ item }} state=present
+        become: yes
+        with_items: "{{packages}}"
+
+      - name: Installing Java pre-requesites
+        apt: name=python-software-properties
+        become: yes
+
+      - name: Adding Java repo
+        apt_repository: repo='ppa:webupd8team/java'
+        become: yes
+
+      - name: Accepting Oracle license
+        debconf: name=oracle-java8-installer question=shared/accepted-oracle-license-v1-1 vtype=select value=true
+        become: yes
+
+      - name: Installing Java 8
+        apt: name=oracle-java8-installer force=yes
+        become: yes
+
+      - name: Update APT package cache
+        become: yes
+        action: apt update_cache=yes
+
+      - name: Downloading Jenkins
+        shell: wget -q -O - http://pkg.jenkins-ci.org/debian/jenkins-ci.org.key | sudo apt-key add -
+        become: yes
+
+      - name: Update Jenkins source list
+        shell: sh -c 'echo deb http://pkg.jenkins-ci.org/debian-stable binary/ > /etc/apt/sources.list.d/jenkins.list'
+        become: yes
+
+      - name: Update APT package cache
+        become: yes
+        action: apt update_cache=yes
+
+      - name: Installing Jenkins
+        apt:
+          name: jenkins
+          state: present
+          install_recommends: yes
+        become: yes
+
+      - name: Configure JVM Arguments
+        lineinfile:
+          dest: /etc/default/jenkins
+          regexp: '^JAVA_ARGS='
+          line: "{{ jenkins_java_args }}"
+        become: yes
+
+      - name: Configure port
+        lineinfile:
+          dest: /etc/default/jenkins
+          regexp: '^HTTP_PORT='
+          line: "{{ jenkins_port_args }}"
+        become: yes
+
+      - name: Immediately restart jenkins
+        service: name=jenkins state=restarted
+        become: yes
+
+      - name: Wait for jenkins to start
+        wait_for: port={{ jenkins_http_port }} delay=30
+
+      - name: Creating Directory For Groovy Script - Jenkins
+        file:
+          path: "{{ jenkins_home }}/init.groovy.d"
+          state: directory
+          mode: 0755
+        register: groovy_dir
+        become: yes
+
+      - name: Copying Groovy Script For Default Jenkins User Creation
+        template:
+          force: yes
+          src: "jenkins_script.groovy.j2"
+          dest: "{{ jenkins_home }}/init.groovy.d/basic-security.groovy"
+          mode: 0755
+        become: yes
+
+      - name: Immediately restart jenkins
+        service: name=jenkins state=restarted
+        become: yes
+
+      - name: Wait for jenkins to start
+        wait_for: port={{ jenkins_http_port }} delay=30
+
+      - name: Removing Groovy Script
+        file:
+          path: "{{ jenkins_home }}/init.groovy.d/basic-security.groovy"
+          state: absent
+        become: yes
+
+      - name: Get Jenkins client Jar file
+        get_url:
+          url: http://{{ jenkins_hostname }}:{{ jenkins_http_port }}/jnlpJars/jenkins-cli.jar
+          dest: /root/
+          mode: 755
+        become: yes
+
+      - name: Immediately restart jenkins
+        service: name=jenkins state=restarted
+        become: yes
+
+      - name: Wait for jenkins to start
+        wait_for: port={{ jenkins_http_port }} delay=30
+        become: yes
+
+      - name: Get Jenkins client Jar file
+        get_url:
+          url: http://{{ jenkins_hostname }}:{{ jenkins_http_port }}/jnlpJars/jenkins-cli.jar
+          dest: /root/
+          mode: 755
+        become: yes
+
+      - name: Install Jenkins Plugins
+        jenkins_plugin:
+          name: "{{ item }}"
+          params: "{{ jenkins_params }}"
+          url_password: "{{ jenkins_admin_password }}"
+          url: "http://{{jenkins_hostname}}:{{jenkins_http_port}}"
+        with_items:
+          - maven-plugin
+          - github
+          - jacoco
+          - junit
+          - test-stability
+          - postbuildscript
+          - build-timeout
+          - postbuild-task
+        register: jenkins_plugins
+
+      - name: Checking Jenkins State
+        service:
+          name: jenkins
+          state: started
+        become: yes
+
+      - name: Restart Jenkins
+        service: name=jenkins state=restarted
+        become: yes
+
+      - wait_for:
+          host: "{{ jenkins_hostname }}"
+          port: "{{ jenkins_http_port }}"
+          delay: 30
+
+      - name: Create target directory
+        file:
+          path: /var/lib/jenkins/workspace/postBuild
+          state: directory
+          mode: 0755
+          owner: jenkins
+
+      - name: Create target directory
+        file:
+          path: /var/lib/jenkins/workspace/templates
+          state: directory
+          mode: 0755
+          owner: jenkins
+
+      - name: Copy mainDOCheckbox.js
+        copy:
+          src: postBuildFiles/mainDOCheckbox.js
+          dest: "{{jenkins_home}}/workspace/postBuild/"
+          owner: jenkins
+          mode: 0755
+
+      - name: Copy mainDOCanary.js
+        copy:
+          src: postBuildFiles/mainDOCanary.js
+          dest: "{{jenkins_home}}/workspace/postBuild/"
+          owner: jenkins
+          mode: 0755
+
+      - name: Copy mainDOLoadbalancer.js
+        copy:
+          src: postBuildFiles/mainDOLoadbalancer.js
+          dest: "{{jenkins_home}}/workspace/postBuild/"
+          owner: jenkins
+          mode: 0755
+
+      - name: Copy infrastructure.js
+        copy:
+          src: postBuildFiles/infrastructure.js
+          dest: "{{jenkins_home}}/workspace/postBuild/"
+          owner: jenkins
+          mode: 0755
+
+      - name: Copy setEnvVarsStable.yml
+        copy:
+          src: postBuildFiles/setEnvVarsStable.yml
+          dest: "{{jenkins_home}}/workspace/postBuild/"
+          owner: jenkins
+          mode: 0755
+
+      - name: Copy setEnvVarsCanary.yml
+        copy:
+          src: postBuildFiles/setEnvVarsCanary.yml
+          dest: "{{jenkins_home}}/workspace/postBuild/"
+          owner: jenkins
+          mode: 0755
+
+      - name: Copy Checkbox.yml
+        copy:
+          src: postBuildFiles/postBuildCheckbox.yml
+          dest: "{{jenkins_home}}/workspace/postBuild/"
+          owner: jenkins
+          mode: 0755
+
+      - name: Copy Canary.yml
+        copy:
+          src: postBuildFiles/postBuildCanary.yml
+          dest: "{{jenkins_home}}/workspace/postBuild/"
+          owner: jenkins
+          mode: 0755
+
+      - name: Copy LoadBalancer.yml
+        copy:
+          src: postBuildFiles/postBuildLoadBalancer.yml
+          dest: "{{jenkins_home}}/workspace/postBuild/"
+          owner: jenkins
+          mode: 0755
+
+      - name: Copy package.json
+        copy:
+          src: postBuildFiles/package.json
+          dest: "{{jenkins_home}}/workspace/postBuild/"
+          owner: jenkins
+          mode: 0644
+
+      - name: Copy package.json for infrastructure.js
+        copy:
+          src: postBuildFiles/package_loadbalancer.json
+          dest: "{{jenkins_home}}/workspace/postBuild/"
+          owner: jenkins
+          mode: 0644
+
+      - name: Copy runCheckbox.sh
+        copy:
+          src: postBuildFiles/runCheckbox.sh
+          dest: "{{jenkins_home}}/workspace/postBuild/"
+          owner: jenkins
+          mode: 0755
+
+      - name: Copy runCanary.sh
+        copy:
+          src: postBuildFiles/runCanary.sh
+          dest: "{{jenkins_home}}/workspace/postBuild/"
+          owner: jenkins
+          mode: 0755
