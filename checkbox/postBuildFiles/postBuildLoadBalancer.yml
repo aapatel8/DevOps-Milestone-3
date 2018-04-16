@@ -51,12 +51,6 @@
           dest: /root/infrastructure.js
           regexp: '^var CANARY ='
           line: "var CANARY = 'http://{{ CANARY.stdout }}';"
-        # Configure Canary IP addressess in infrustructure.js
-      - name: Configure Canary IP for coming back to previous one
-        lineinfile:
-          dest: /root/infrastructure.js
-          regexp: '^var LASTCANARY ='
-          line: "var LASTCANARY = 'http://{{ CANARY.stdout }}';"
         # Add package.json
       - name: Add package.json
         template: src=package_loadbalancer.json dest=/root/package.json
