@@ -1,0 +1,15 @@
+#!/bin/bash
+sleep 10
+export BRANCHNAME=$(git rev-parse --abbrev-ref HEAD)
+export MASTER_SHA1=$(git rev-parse master)
+export SHA1=$(git rev-parse canary)
+export SHA2=$(git rev-parse master)
+export GITHUB_URL=$(git config --get remote.origin.url | sed 's/.git$//')
+export JENKINS_IP=104.236.115.199
+export JENKINS_PORT=8008
+if [ $BRANCHNAME = 'master' ]; then
+    curl "http://$JENKINS_IP:$JENKINS_PORT/git/notifyCommit?url=$GITHUB_URL&branches=master&sha1=$SHA2"
+elif [ $BRANCHNAME = 'canary' ]; then
+    curl "http://$JENKINS_IP:$JENKINS_PORT/git/notifyCommit?url=$GITHUB_URL&branches=canary&sha1=$SHA1"
+    echo
+fi
