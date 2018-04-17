@@ -1,0 +1,54 @@
+---
+- name: Executing Ansible Role to Create Droplet for MySQL instance
+  hosts:
+    - localhost
+  roles:
+    - MySQLDroplet
+
+- name: Executing Ansible Role to Create Droplet for Jenkins instance
+  hosts:
+    - localhost
+  roles:
+    - JenkinsDroplet
+
+- name: Executing Ansible Role to Create 5 Droplets
+  hosts:
+    - localhost
+  roles:
+    - Droplet
+
+- name: Refresh Inventory
+  hosts:
+    - localhost
+  tasks:
+    - meta: refresh_inventory
+
+- name: Executing Ansible Role to Setup MySQL instance
+  hosts:
+    - mysql
+  roles:
+    - MySQL
+  become: yes
+
+- name: Executing Ansible Role to Setup Jenkins
+  hosts:
+    - jenkins
+  roles:
+    - Jenkins
+  become: yes
+  gather_facts: no
+
+- name: Executing Ansible Role to Install iTrust2
+  hosts:
+    - jenkins
+  roles:
+    - iTrust2Build
+  become: yes
+
+- name: Install iTrust2 on the 5 droplets
+  hosts:
+    - main
+  roles:
+    - iTrust2Droplets
+  become: yes
+...

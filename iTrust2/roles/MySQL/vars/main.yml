@@ -1,0 +1,7 @@
+---
+    packages:
+      - mysql-server-5.7
+      - python-mysqldb
+    mysql_user: root
+    mysql_password: "{{ lookup('env','MYSQL_PASS') }}"
+...

@@ -1,0 +1,93 @@
+---
+- hosts: iTrust
+  remote_user: root
+  gather_facts: no
+  serial: 1
+
+  vars:
+    itrust_home_dir: /root
+    itrust_clone_dir: /root/iTrust2-v2-fork
+    itrust_dir: /root/iTrust2-v2-fork/iTrust2
+    mysql_user: root
+    mysql_password: "{{ lookup('env','MYSQL_PASS') }}"
+    email_username: scbutle2@ncsu.edu
+    email_password:
+
+  tasks:
+  - name: Stop the jetty server
+    shell: mvn jetty:stop
+    args:
+      chdir: /root/iTrust2-v2/iTrust2
+
+  - name: Delete the iTrust2 directory
+    file:
+      path: /root/iTrust2-v2
+      state: absent
+
+  - name: download itrust
+    git:
+      repo: https://github.com/sbutler2901/iTrust2-v2-fork
+      dest: "{{ itrust_clone_dir }}"
+      accept_hostkey: yes
+      clone: yes
+      update: yes
+      force: yes
+
+  - name: setup itrust hibernate.properties
+    template:
+      src: /var/lib/jenkins/workspace/templates/hibernate.properties.temp
+      dest: /root/iTrust2-v2-fork/iTrust2/src/main/resources/hibernate.properties
+      owner: root
+      mode: 0600
+
+  - name: setup db.properties
+    template:
+      src: /var/lib/jenkins/workspace/templates/db.properties.temp
+      dest: /root/iTrust2-v2-fork/iTrust2/src/main/java/db.properties
+      owner: root
+      mode: 0600
+
+  - name: setup email.properties
+    template:
+      src: /var/lib/jenkins/workspace/templates/email.properties.temp
+      dest: /root/iTrust2-v2-fork/iTrust2/src/main/java/email.properties
+      owner: root
+      mode: 0600
+
+  - name: setup mysql my.cnf
+    template:
+      src: /var/lib/jenkins/workspace/templates/my.cnf
+      dest: /root/.my.cnf
+      owner: root
+      mode: 0600
+
+  - name: Add mysql user
+    mysql_user:
+      name: root
+      password: "{{ mysql_password }}"
+      priv: '*.*:ALL'
+      login_user: root
+      login_password: "{{ mysql_password }}"
+      state: present
+    become: yes
+
+  - name: Update root
+    raw: mysql -e "UPDATE mysql.user SET Grant_priv='Y', Super_priv='Y' WHERE User='root'; FLUSH PRIVILEGES";
+
+  - name: restart mysql reloading configs
+    become: yes
+    systemd:
+      state: restarted
+      daemon_reload: yes
+      name: mysql
+
+  - name: maven build DB
+    command: mvn -f "{{ itrust_dir }}"/pom.xml process-test-classes
+
+  - name: maven build & start itrust
+    shell: nohup mvn -f "{{ itrust_dir }}"/pom.xml jetty:run count 2> /dev/null &
+ 
+  - name: Wait for port 8080 to become open
+    wait_for:
+      port: 8080
+      delay: 15

@@ -1,0 +1,122 @@
+---
+    - name: Add environment variables
+      template:
+        src: variables
+        dest: /etc/environment
+      become: yes
+
+      # Restart the server to set environment variables
+    - name: Restarting Server
+      become: yes
+      shell: sleep 2 && /sbin/shutdown -r now "Ansible system package upgraded"
+      async: 1
+      poll: 0
+
+      # Wait for server to reboot
+    - name: Wait for reboot
+      local_action: wait_for host={{ inventory_hostname }} port=22 delay=10 state=started
+      become: false
+
+    - name: Add ansible repo
+      apt_repository:
+        repo: ppa:ansible/ansible
+        state: present
+
+    - name: Get nodejs package
+      shell: curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
+
+    - name: Install packages
+      become: yes
+      apt:
+        pkg: "{{ item }}"
+        state: present
+        update_cache: yes
+      with_items: "{{ packages }}"
+
+    - name: Install remaining packages
+      become: yes
+      pip:
+        name: "{{ item }}"
+        state: present
+      with_items: "{{ pippackages }}"
+
+    - name: Add id_rsa
+      copy:
+        src: ~/.ssh/id_rsa
+        dest: /var/lib/jenkins/.ssh/
+        mode: 0600
+        owner: jenkins
+
+    - name: Create target directory
+      file:
+        path: /var/lib/jenkins/workspace/templates
+        state: directory
+        mode: 0755
+        owner: jenkins
+
+    - name: Add hibernate.properties
+      template:
+        src: hibernate.properties.template
+        dest: /var/lib/jenkins/workspace/templates/hibernate.properties
+        # dest: /root/iTrust2-v2-fork/iTrust2/src/main/resources/hibernate.properties
+        mode: 0644
+        owner: jenkins
+
+    - name: setup db.properties
+      template:
+        src: db.properties.template
+        dest: /var/lib/jenkins/workspace/templates/db.properties
+        # dest: /root/iTrust2-v2-fork/iTrust2/src/main/java/db.properties
+        mode: 0644
+        owner: jenkins
+
+    - name: setup email.properties
+      template:
+        src: email.properties.template
+        dest: /var/lib/jenkins/workspace/templates/email.properties
+        # dest: /root/iTrust2-v2-fork/iTrust2/src/main/java/email.properties
+        mode: 0644
+        owner: jenkins
+
+    - name: Add my.cnf for mysql
+      template:
+        src: my.cnf
+        dest: /root/.my.cnf
+        mode: 0644
+
+    - name: Add mysql user
+      mysql_user:
+        name: root
+        password: "{{ mysql_password }}"
+        priv: '*.*:ALL'
+        login_user: root
+        login_password: "{{ mysql_password }}"
+        state: present
+      become: yes
+
+    - name: Update root
+      raw: mysql -e "UPDATE mysql.user SET Grant_priv='Y', Super_priv='Y' WHERE User='root'; FLUSH PRIVILEGES";
+
+    - name: Add mysql user
+      mysql_user:
+        name: jenkins
+        password: "{{ mysql_password }}"
+        priv: '*.*:ALL'
+        state: present
+      become: yes
+
+    - name: Add Jenkins job master (iTrust2)
+      jenkins_job:
+        config: "{{ lookup('file', 'iTrust2.xml') }}"
+        name: iTrust2_Master
+        password: "{{jenkins_pass}}"
+        url: http://localhost:8008/
+        user: admin
+
+    - name: Add Jenkins job prod (iTrust2)
+      jenkins_job:
+        config: "{{ lookup('file', 'iTrust2_rolling_update.xml') }}"
+        name: iTrust2_Prod
+        password: "{{jenkins_pass}}"
+        url: http://localhost:8008/
+        user: admin

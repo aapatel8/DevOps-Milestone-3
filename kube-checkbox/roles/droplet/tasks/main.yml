@@ -1,0 +1,10 @@
+---
+- name: npm install
+  shell: npm install
+
+- name: Run script to create droplet and store droplet info
+  shell: node mainDO.js
+
+- pause:
+    seconds: 30
+    prompt: Wait to ensure droplets have been created

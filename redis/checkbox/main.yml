@@ -1,0 +1,28 @@
+---
+
+- name: Executing Ansible Role to Create Droplet
+  hosts:
+    - localhost
+  roles:
+    - Droplet
+
+- name: Refresh Inventory
+  hosts:
+    - localhost
+  tasks:
+    - meta: refresh_inventory
+
+- name: Executing Ansible Role to Install and Run checkbox
+  hosts:
+    - droplets
+  roles:
+    - Checkbox
+  become: yes
+
+- name: Install and configure Redis
+  hosts:
+    - droplets
+  roles:
+    - Redis
+  become: yes
+...

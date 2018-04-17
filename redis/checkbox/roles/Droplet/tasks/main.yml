@@ -1,0 +1,10 @@
+---
+- name: npm install
+  shell: npm install
+
+# - name: Run script to create droplet for mongodb
+#   shell: node main_digitalocean_mongodb.js
+
+- name: Run script to create droplet and store droplet info
+  shell: node mainDO.js
+...

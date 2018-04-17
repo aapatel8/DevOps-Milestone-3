@@ -1,0 +1,5 @@
+---
+- name: Install and Run Redis
+  include: Redis.yml
+  become: yes
+...

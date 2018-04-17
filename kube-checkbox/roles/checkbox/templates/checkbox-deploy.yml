@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: checkbox
+spec:
+  selector:
+    app: checkbox
+  ports:
+  - nodePort: 30000
+    port: 80
+    protocol: TCP
+    targetPort: 80
+  type: NodePort
+  externalIPs:
+{% for item in workerIps %}
+    - {{ workerIps[item] }}
+{% endfor %}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: checkbox
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: checkbox
+  template:
+    metadata:
+      labels:
+        app: checkbox
+    spec:
+      containers:
+      - name: checkbox
+        image: akshitpatel/devops-checkbox
+        #imagePullPolicy: Never
+        command: ["/bin/bash"]
+        args: ["-c", "source /root/environmentVariables.sh && service nginx start && service mongodb start && forever /root/checkbox.io/server-side/site/server.js"]
+        #ports:
+        #- containerPort: 80
+          #name: http

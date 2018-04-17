@@ -1,0 +1,24 @@
+---
+- name: adding global vars
+  include_vars:
+    file: vars/global_ansible_vars.yml
+    name: global
+
+- name: adding secret vars
+  include_vars:
+    file: vars/kube-token.yml
+    name: secret
+
+- name: reset node
+  command: kubeadm reset
+
+- name: kubeadm init with pre generated token
+  command: kubeadm init --token {{ secret.kubeadm_token }} --pod-network-cidr {{ global.flannel_subnet }} --token-ttl 0
+
+- name: install flannel pod network
+  command: kubectl --kubeconfig /etc/kubernetes/admin.conf apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+
+- lineinfile:
+    path: "/etc/environment" 
+    line: "KUBECONFIG=/etc/kubernetes/admin.conf"
+    create: yes

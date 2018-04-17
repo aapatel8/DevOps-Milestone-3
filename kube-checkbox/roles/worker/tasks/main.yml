@@ -1,0 +1,20 @@
+---
+- name: adding vars
+  include_vars:
+    file: vars/master_ip.yml
+    name: masterIP
+
+- name: adding secret vars
+  include_vars:
+    file: vars/kube-token.yml
+    name: secret
+
+- name: Reset kube node
+  command: kubeadm reset
+
+- pause:
+    seconds: 30
+    prompt: "Waiting briefly to ensure Master nodes are stable"
+
+- name: kubeadm join with pre generated token
+  command: kubeadm join --token {{ secret.kubeadm_token }} {{ masterIP.master_ip }}:6443 --discovery-token-unsafe-skip-ca-verification

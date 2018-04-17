@@ -1,0 +1,50 @@
+---
+- name: Executing Ansible Role to Create Droplet
+  hosts:
+    - localhost
+  roles:
+    - droplet
+
+- name: Refresh Inventory
+  hosts:
+    - localhost
+  tasks:
+    - meta: refresh_inventory
+
+- name: Install python on hosts
+  hosts:
+    - all
+  roles:
+    - ansible
+  gather_facts: no
+  become: yes
+
+- name: Executing Ansible Role to Setup Docker and kubernetes
+  hosts:
+    - all
+  roles:
+    - docker
+    - kubeadm
+  become: yes
+
+- name: Executing Ansible Role to Setup Kubernetes masters
+  hosts:
+    - master
+  roles:
+    - master
+  become: yes
+
+- name: Executing Ansible Role to Setup Kubernetes workers
+  hosts:
+    - workers
+  roles:
+    - worker
+  become: yes
+
+- name: Setting up checkbox on Cluster
+  hosts:
+    - master
+  roles:
+    - checkbox
+  become: yes
+...

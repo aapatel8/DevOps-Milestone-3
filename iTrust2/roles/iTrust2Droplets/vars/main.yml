@@ -1,0 +1,14 @@
+---
+    itrust_home_dir: /root
+    itrust_clone_dir: /root/iTrust2-v2-fork
+    itrust_dir: /root/iTrust2-v2-fork/iTrust2
+    mysql_user: root
+    mysql_password: "{{ lookup('env','MYSQL_PASS') }}"
+    email_username: scbutle2@ncsu.edu
+    email_password:
+    packages:
+      - git
+      - mysql-server-5.7
+      - openjdk-8-jdk
+      - maven
+      - python-mysqldb

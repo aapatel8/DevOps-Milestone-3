@@ -1,0 +1,25 @@
+---
+    packages:
+      - git
+      - default-jdk
+      - maven
+      - mysql-server-5.7
+      - python-mysqldb
+      - python-pip
+      - python3-lxml
+      - nodejs
+      - software-properties-common
+      - ansible
+
+    pippackages:
+      - python-jenkins
+      - lxml
+
+    mysql_user: jenkins
+    mysql_password: "{{ lookup('env','MYSQL_PASS') }}"
+    email_username: aapatel8@ncsu.edu
+    email_password:
+    jenkins_pass: "{{ lookup('env','JENKINS_PASS') }}"
+    DOTOKEN: "{{ lookup('env','DOTOKEN')}}"
+    DOSSHID: "{{ lookup('env','DOSSHID')}}"
+...

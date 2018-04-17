@@ -1,0 +1,33 @@
+---
+    - name: Copy redis master config
+      copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        mode: 777
+      with_items:
+      - src:  redis_master.conf
+        dest: /etc/redis/redis.conf
+      when: inventory_hostname == "root0"
+
+    - name: Copy redis slave conf
+      copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        mode: 777
+      with_items:
+      - src:  redis_slave.conf
+        dest: /etc/redis/redis.conf
+      when: inventory_hostname != "root0"
+
+    - name: Add master redis ip
+      lineinfile:
+        path: /etc/redis/redis.conf
+        line: 'slaveof {{ hostvars["root0"].ansible_host }} 6379'
+      when: inventory_hostname != "root0"
+
+    - name: Restart redis-server
+      become: yes
+      service:
+        name: redis-server
+        state: restarted
+...

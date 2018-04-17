@@ -1,0 +1,40 @@
+---
+    - apt_repository:
+        repo: "deb http://archive.ubuntu.com/ubuntu trusty universe"
+        update_cache: 'yes'
+
+    - name: install packages
+      become: yes
+      apt:
+        pkg: "{{ item }}"
+        state: present
+        update_cache: yes
+      with_items: "{{ packages }}"
+
+    - name: Add my.cnf for mysql
+      become: yes
+      template:
+        src: my.cnf
+        dest: /root/.my.cnf
+        mode: 0644
+        owner: root
+
+    - name: start MySQL
+      shell: service mysql start
+
+    - name: Add mysql user
+      mysql_user:
+        name: root
+        password: "{{ mysql_password }}"
+        priv: '*.*:ALL'
+        login_user: root
+        login_password: "{{ mysql_password }}"
+        state: present
+      become: yes
+
+    - name: Update root
+      raw: mysql -e "UPDATE mysql.user SET Grant_priv='Y', Super_priv='Y' WHERE User='root'; FLUSH PRIVILEGES";
+
+    - name: restart MySQL
+      shell: service mysql restart
+...

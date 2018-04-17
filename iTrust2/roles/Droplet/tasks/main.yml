@@ -1,0 +1,7 @@
+---
+- name: npm install
+  shell: npm install
+
+- name: Run script to create droplet and store droplet info
+  shell: node mainDo.js
+...

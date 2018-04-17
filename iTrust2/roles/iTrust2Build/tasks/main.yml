@@ -1,0 +1,5 @@
+---
+- name: Install and Run iTrust
+  include: iTrust2.yml
+  become: yes
+...

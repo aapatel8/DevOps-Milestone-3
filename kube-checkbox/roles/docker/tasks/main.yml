@@ -1,0 +1,11 @@
+---
+- name: install docker
+  apt: package={{ item }} update_cache=yes
+  with_items:
+    - docker.io
+
+- name: Start docker service
+  systemd:
+    name: docker
+    state: started
+    enabled: yes

@@ -1,0 +1,23 @@
+---
+- name: adding worker ip's
+  include_vars:
+    file: vars/worker_ips.yml
+    name: workerIps
+
+- name: add checkbox deploy file
+  template:
+    src: templates/checkbox-deploy.yml
+    dest: ~/checkbox-deploy.yml
+    mode: 0644
+    owner: root
+
+- name: deleting previous deployments and services
+  command: kubectl delete service/checkbox deploy/checkbox
+  ignore_errors: yes
+
+- pause:
+    seconds: 120
+    prompt: 'Ensure nodes are in stable state'
+
+- name: run checkbox deployment
+  command: kubectl create -f ~/checkbox-deploy.yml
